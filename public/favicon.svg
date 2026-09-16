@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="7" fill="#F5F4F0"/>
+  <g
+    fill="none"
+    stroke="#C4623A"
+    stroke-width="2.8"
+    stroke-linecap="round"
+    transform="translate(16 16)"
+  >
+    <line transform="rotate(0)" x1="0" y1="-12.6" x2="0" y2="-4.2"/>
+    <line transform="rotate(45)" x1="0" y1="-12.6" x2="0" y2="-4.2"/>
+    <line transform="rotate(90)" x1="0" y1="-12.6" x2="0" y2="-4.2"/>
+    <line transform="rotate(135)" x1="0" y1="-12.6" x2="0" y2="-4.2"/>
+    <line transform="rotate(180)" x1="0" y1="-12.6" x2="0" y2="-4.2"/>
+    <line transform="rotate(225)" x1="0" y1="-12.6" x2="0" y2="-4.2"/>
+    <line transform="rotate(270)" x1="0" y1="-12.6" x2="0" y2="-4.2"/>
+    <line transform="rotate(315)" x1="0" y1="-12.6" x2="0" y2="-4.2"/>
+  </g>
+</svg>
