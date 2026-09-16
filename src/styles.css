@@ -1,23 +1,23 @@
 @import "tailwindcss";
 
 @theme {
-  --color-bg: #f5f4f0;
-  --color-bg-warm: #f7f6f3;
-  --color-surface: #ffffff;
-  --color-muted: #ebe9e4;
-  --color-muted-2: #e4e2dc;
-  --color-fg: #1a1916;
-  --color-fg-muted: #8a8680;
-  --color-fg-subtle: #b0aca4;
-  --color-accent: #c4623a;
-  --color-ink: #191919;
-  --color-hairline: color-mix(in oklab, #1a1916 10%, transparent);
-  --color-ring: #c4623a;
-  --color-bar: #2b2b2e;
-  --color-bar-chip: #353538;
-  --color-bar-fg: #f4f4f5;
-  --color-bar-muted: #c8c8cc;
-  --color-bar-line: #5c5c60;
+  --color-bg: #000000;
+  --color-bg-warm: #070709;
+  --color-surface: #111114;
+  --color-muted: #1c1c21;
+  --color-muted-2: #26262e;
+  --color-fg: #f4f4f7;
+  --color-fg-muted: #94949e;
+  --color-fg-subtle: #62626d;
+  --color-accent: #3b82f6;
+  --color-ink: #f4f4f7;
+  --color-hairline: rgba(255, 255, 255, 0.08);
+  --color-ring: #3b82f6;
+  --color-bar: #141418;
+  --color-bar-chip: #1f1f25;
+  --color-bar-fg: #f4f4f6;
+  --color-bar-muted: #9ca3af;
+  --color-bar-line: #2a2a32;
 
   --font-sans: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text",
     "Segoe UI", system-ui, sans-serif;
@@ -30,33 +30,33 @@
   --radius-pill: 999px;
 
   --shadow-composer:
-    0 0 0 1px rgba(26, 25, 22, 0.05), 0 10px 32px -10px rgba(26, 25, 22, 0.14),
-    0 2px 8px -2px rgba(26, 25, 22, 0.06);
-  --shadow-sheet: 0 -8px 40px rgba(26, 25, 22, 0.14);
-  --shadow-card: 0 0 0 1px rgba(26, 25, 22, 0.06), 0 1px 2px rgba(26, 25, 22, 0.04);
+    0 0 0 1px rgba(255, 255, 255, 0.08), 0 10px 32px -10px rgba(0, 0, 0, 0.8),
+    0 2px 8px -2px rgba(0, 0, 0, 0.5);
+  --shadow-sheet: 0 -8px 40px rgba(0, 0, 0, 0.8);
+  --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.08), 0 1px 2px rgba(0, 0, 0, 0.4);
 
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
 }
 
-html.dark {
-  --color-bg: #161513;
-  --color-bg-warm: #1c1b18;
-  --color-surface: #2a2824;
-  --color-muted: #32302b;
-  --color-muted-2: #3c3934;
-  --color-fg: #f3f1ec;
-  --color-fg-muted: #a8a49c;
-  --color-fg-subtle: #7a766e;
-  --color-accent: #d47852;
-  --color-ink: #f3f1ec;
-  --color-hairline: color-mix(in oklab, #f3f1ec 10%, transparent);
+html.dark, html {
+  --color-bg: #000000;
+  --color-bg-warm: #070709;
+  --color-surface: #111114;
+  --color-muted: #1c1c21;
+  --color-muted-2: #26262e;
+  --color-fg: #f4f4f7;
+  --color-fg-muted: #94949e;
+  --color-fg-subtle: #62626d;
+  --color-accent: #3b82f6;
+  --color-ink: #f4f4f7;
+  --color-hairline: rgba(255, 255, 255, 0.08);
   --shadow-composer:
-    0 0 0 1px rgba(0, 0, 0, 0.35), 0 10px 32px -10px rgba(0, 0, 0, 0.45);
-  --shadow-sheet: 0 -8px 40px rgba(0, 0, 0, 0.45);
-  --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06);
+    0 0 0 1px rgba(255, 255, 255, 0.08), 0 10px 32px -10px rgba(0, 0, 0, 0.8);
+  --shadow-sheet: 0 -8px 40px rgba(0, 0, 0, 0.8);
+  --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.08);
 }
 
-html.dark {
+html.dark, html {
   color-scheme: dark;
 }
 
@@ -163,6 +163,65 @@ html.dark {
 
 .think-mark {
   animation: starburst-think 1.6s ease-in-out infinite;
+  transform-origin: center;
+}
+
+@keyframes night-wave-font {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+.thinking-night-wave {
+  display: inline-flex;
+  align-items: center;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.4) 0%,
+    rgba(255, 255, 255, 0.6) 25%,
+    rgba(255, 255, 255, 1) 50%,
+    rgba(147, 197, 253, 0.9) 65%,
+    rgba(255, 255, 255, 0.6) 80%,
+    rgba(255, 255, 255, 0.4) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: night-wave-font 2.2s linear infinite;
+}
+
+@keyframes creature-breathe {
+  0%, 100% {
+    transform: scale(1) translateY(0);
+  }
+  50% {
+    transform: scale(1.05, 0.95) translateY(-2px);
+  }
+}
+
+.creature-animated {
+  animation: creature-breathe 2.5s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+@keyframes creature-thinking-pulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 0 rgba(59, 130, 246, 0));
+  }
+  50% {
+    transform: scale(1.06);
+    filter: drop-shadow(0 0 6px rgba(147, 197, 253, 0.4));
+  }
+}
+
+.creature-thinking {
+  animation: creature-thinking-pulse 1.8s ease-in-out infinite;
   transform-origin: center;
 }
 
@@ -280,4 +339,9 @@ html.dark {
   border: 0;
   border-top: 1px solid var(--color-hairline);
   margin: 1em 0;
+}
+
+.thinking-inverted-diff {
+  mix-blend-mode: difference;
+  color: #ffffff;
 }

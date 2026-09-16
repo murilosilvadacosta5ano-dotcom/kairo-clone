@@ -1,9 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  Camera,
   Check,
-  FileText,
-  Image as ImageIcon,
   Mic,
   X,
 } from "lucide-react";
@@ -73,48 +70,56 @@ export function ModelPicker() {
   }, [open]);
 
   return (
-    <Overlay open={open} onClose={() => setOpen(false)} labelledBy="model-title" panelClassName="bg-bar">
-      <div className="px-4 pb-8 pt-3 text-bar-fg">
-        <div className="mx-auto mb-3 h-1 w-10 rounded-full bg-bar-line" />
-        <div className="mb-3 flex items-center justify-between px-1">
-          <h2 id="model-title" className="text-[15px] font-medium text-bar-muted">
-            Modelo
+    <Overlay
+      open={open}
+      onClose={() => setOpen(false)}
+      labelledBy="model-title"
+      panelClassName="bg-[#121318] border border-white/10"
+    >
+      <div className="p-4 text-white">
+        <div className="mb-3 flex items-center justify-between">
+          <h2 id="model-title" className="text-[15px] font-semibold text-white">
+            Selecionar Modelo de IA
           </h2>
           <button
             type="button"
             onClick={() => setOpen(false)}
-            className="press text-[16px] font-semibold text-bar-fg"
+            className="text-[13px] text-zinc-400 hover:text-white"
           >
-            OK
+            Fechar
           </button>
         </div>
         <div
           role="listbox"
           aria-label="Modelo"
-          className="no-scrollbar max-h-[52dvh] overflow-y-auto rounded-2xl bg-bar-chip"
+          className="no-scrollbar max-h-[55vh] overflow-y-auto divide-y divide-white/5 rounded-xl bg-white/5"
         >
-          {models.map((m, i) => (
-            <button
-              key={m.id}
-              type="button"
-              role="option"
-              aria-selected={model === m.id}
-              onClick={() => setModel(m.id)}
-              className={cn(
-                "flex w-full items-center justify-between px-4 py-3.5 text-left",
-                i !== models.length - 1 && "border-b border-bar-line",
-                model === m.id ? "bg-bar-fg/10" : "",
-              )}
-            >
-              <span>
-                <span className="block text-[17px] font-medium">{m.name}</span>
-                <span className="block text-[13px] text-bar-muted">{m.blurb}</span>
-              </span>
-              {model === m.id ? (
-                <Check className="size-4 text-bar-fg" strokeWidth={2.4} />
-              ) : null}
-            </button>
-          ))}
+          {models.map((m) => {
+            const isSelected = model === m.id;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                role="option"
+                aria-selected={isSelected}
+                onClick={() => setModel(m.id)}
+                className={cn(
+                  "flex w-full items-center justify-between px-3.5 py-3 text-left transition-colors",
+                  isSelected ? "bg-white/10 text-white" : "hover:bg-white/5 text-zinc-200",
+                )}
+              >
+                <div>
+                  <span className="block text-[14.5px] font-medium">{m.name}</span>
+                  {m.blurb && (
+                    <span className="block text-[12px] text-zinc-400">{m.blurb}</span>
+                  )}
+                </div>
+                {isSelected ? (
+                  <Check className="size-4 text-blue-400 shrink-0 ml-2" strokeWidth={2.5} />
+                ) : null}
+              </button>
+            );
+          })}
         </div>
       </div>
     </Overlay>
@@ -132,7 +137,7 @@ export function UpgradeSheet() {
         <div className="mb-4 flex items-start justify-between">
           <div>
             <h2 id="up-title" className="font-display text-[28px] font-medium">
-              Obter mais Claude
+              Obter mais Kairo
             </h2>
             <p className="mt-1 text-[15px] text-fg-muted">
               Faça upgrade para mais uso e recursos
@@ -162,7 +167,7 @@ export function UpgradeSheet() {
         </ul>
         <div className="rounded-group bg-surface p-4" style={{ boxShadow: "var(--shadow-card)" }}>
           <div className="mb-1 flex items-baseline justify-between">
-            <span className="text-[16px] font-semibold">Claude Pro</span>
+            <span className="text-[16px] font-semibold">Kairo Pro</span>
             <span className="text-[16px] font-medium">US$ 20/mês</span>
           </div>
           <p className="mb-4 text-[13px] text-fg-muted">Cancele quando quiser</p>
@@ -173,54 +178,6 @@ export function UpgradeSheet() {
           >
             Fazer upgrade
           </button>
-        </div>
-      </div>
-    </Overlay>
-  );
-}
-
-export function AttachSheet() {
-  const open = useApp((s) => s.attachOpen);
-  const setOpen = useApp((s) => s.setAttach);
-  const setDraft = useApp((s) => s.setDraft);
-  const draft = useApp((s) => s.draft);
-
-  function pick(kind: string) {
-    const input = document.createElement("input");
-    input.type = "file";
-    if (kind === "image") input.accept = "image/*";
-    input.onchange = () => {
-      const f = input.files?.[0];
-      if (!f) return;
-      setDraft(draft ? `${draft}\n\n[anexo: ${f.name}]` : `[anexo: ${f.name}]`);
-      setOpen(false);
-    };
-    input.click();
-  }
-
-  return (
-    <Overlay open={open} onClose={() => setOpen(false)} labelledBy="att-title">
-      <div className="px-5 pb-8 pt-4">
-        <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-muted-2" />
-        <h2 id="att-title" className="sr-only">
-          Anexar
-        </h2>
-        <div className="grid grid-cols-3 gap-3">
-          {[
-            { label: "Câmera", Icon: Camera, on: () => pick("image") },
-            { label: "Fotos", Icon: ImageIcon, on: () => pick("image") },
-            { label: "Arquivos", Icon: FileText, on: () => pick("file") },
-          ].map(({ label, Icon, on }) => (
-            <button
-              key={label}
-              type="button"
-              onClick={on}
-              className="press flex flex-col items-center gap-2 rounded-2xl bg-muted py-5 text-[13px] font-medium"
-            >
-              <Icon className="size-6" strokeWidth={1.6} />
-              {label}
-            </button>
-          ))}
         </div>
       </div>
     </Overlay>
@@ -266,7 +223,7 @@ export function VoiceSheet() {
     <Overlay open={open} onClose={() => setOpen(false)} labelledBy="voice-title">
       <div className="flex flex-col items-center px-6 pb-10 pt-6">
         <h2 id="voice-title" className="font-display text-[24px] font-medium">
-          Fale com o Claude
+          Fale com o Kairo
         </h2>
         <p className="mt-1 text-[14px] text-fg-muted">
           {listening ? "Ouvindo…" : "Toque no microfone para começar"}
@@ -338,7 +295,7 @@ export function InfoSheet() {
         </div>
         <div className="flex flex-col items-center py-4">
           <ClaudeMark className="mb-3 size-12 text-accent" />
-          <p className="font-display text-[28px] font-medium">Claude</p>
+          <p className="font-display text-[28px] font-medium">Kairo</p>
           <p className="mt-1 text-[14px] text-fg-muted">Versão 1.0 · iOS</p>
         </div>
         <p className="text-[15px] leading-relaxed text-fg-muted">

@@ -1,5 +1,35 @@
 export type Role = "user" | "assistant";
 
+export interface CustomBot {
+  id: string;
+  name: string;
+  gender: string;
+  intro?: string;
+  personality: string;
+  welcomeMsg?: string;
+  scenario?: string;
+  instructions?: string;
+  storyMode?: boolean;
+  storyTitle?: string;
+  storyBody?: string;
+  storyCharacter?: string;
+  likes?: string;
+  tags?: string[];
+  photo: string;
+  messageCount?: number;
+  createdAt: number;
+}
+
+export interface ChatPersona {
+  id: string;
+  name: string;
+  avatar: string;
+  age: string;
+  gender: string;
+  bio: string;
+  isOriginal?: boolean;
+}
+
 export type MainView =
   | "home"
   | "chat"
@@ -8,7 +38,8 @@ export type MainView =
   | "project"
   | "code"
   | "artifacts"
-  | "artifact";
+  | "artifact"
+  | "bots";
 
 export type SettingsPage =
   | "index"
@@ -51,6 +82,8 @@ export interface Conversation {
   updatedAt: number;
   temporary?: boolean;
   projectId?: string;
+  pinned?: boolean;
+  botId?: string;
 }
 
 export interface Project {
@@ -77,9 +110,9 @@ export interface RemoteModel {
 }
 
 export const FALLBACK_MODELS: RemoteModel[] = [
-  { id: "flash-lite", name: "3.5 Flash Lite", blurb: "Rápido" },
-  { id: "flash", name: "3.6 Flash", blurb: "Equilíbrio" },
-  { id: "pro", name: "3.1 Pro", blurb: "Mais profundo" },
+  { id: "flash", name: "Flash", blurb: "Rápido e inteligente" },
+  { id: "flash-lite", name: "Flash Lite", blurb: "Mais leve e ágil" },
+  { id: "pro", name: "Pro", blurb: "Raciocínio aprofundado" },
 ];
 
 export const MODELS = FALLBACK_MODELS;
@@ -103,19 +136,30 @@ export const GROQ_FREE_MODELS: RemoteModel[] = [
   { id: "openai/gpt-oss-20b", name: "GPT-OSS 20B", blurb: "Free" },
 ];
 
+export interface AuthUser {
+  id: string;
+  name: string;
+  email: string;
+  avatar: string;
+  isLoggedIn: boolean;
+}
+
 export const USER = {
-  firstName: "Muri",
-  fullName: "Murilo Silva da Costa",
-  email: "murilosilva.dacosta12@gmail.com",
-  initials: "MS",
+  firstName: "Usuário",
+  fullName: "Usuário Kairo",
+  email: "usuario@kairo.ai",
+  initials: "U",
 };
 
 export function modelLabel(id: string, remote: RemoteModel[]) {
-  return (
-    remote.find((m) => m.id === id)?.name ??
-    FALLBACK_MODELS.find((m) => m.id === id)?.name ??
-    id
-  );
+  const r = remote.find((m) => m.id === id);
+  if (r) return r.name;
+  const f = FALLBACK_MODELS.find((m) => m.id === id);
+  if (f) return f.name;
+  if (id.toLowerCase().includes("lite")) return "Flash Lite";
+  if (id.toLowerCase().includes("pro")) return "Pro";
+  if (id.toLowerCase().includes("flash")) return "Flash";
+  return id;
 }
 
 export function visibleModels(remote: RemoteModel[]) {

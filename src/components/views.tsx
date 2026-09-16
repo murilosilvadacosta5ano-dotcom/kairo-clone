@@ -83,7 +83,7 @@ export function ConversationsView() {
         <Blank
           icon={<BubbleIcon className="size-8" />}
           title="Nenhuma conversa ainda"
-          body="Toque em Novo bate-papo para começar a falar com o Claude."
+          body="Toque em Novo bate-papo para começar a falar com o Kairo."
         />
       ) : (
         <ul className="overflow-hidden rounded-group bg-muted">
@@ -287,7 +287,7 @@ export function CodeView() {
         <Blank
           icon={<CodeGlyph className="size-8" />}
           title="Nenhum código ainda"
-          body="Peça ao Claude para escrever, revisar ou explicar código. Os trechos longos viram artefatos aqui."
+          body="Peça ao Kairo para escrever, revisar ou explicar código. Os trechos longos viram artefatos aqui."
         />
       ) : (
         <ul className="flex flex-col gap-2">
@@ -328,7 +328,7 @@ export function ArtifactsView() {
         <Blank
           icon={<PuzzleIcon className="size-8" />}
           title="Nenhum artefato"
-          body="Quando o Claude gerar documentos ou código mais longos, eles aparecem aqui."
+          body="Quando o Kairo gerar documentos ou código mais longos, eles aparecem aqui."
         />
       ) : (
         <ul className="flex flex-col gap-2">

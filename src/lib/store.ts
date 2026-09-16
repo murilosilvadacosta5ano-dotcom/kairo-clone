@@ -3,8 +3,11 @@ import { persist } from "zustand/middleware";
 import type {
   AiProvider,
   Artifact,
+  AuthUser,
   ChatMessage,
+  ChatPersona,
   Conversation,
+  CustomBot,
   MainView,
   Project,
   RemoteModel,
@@ -30,6 +33,24 @@ export interface ApiPrefs {
   provider: AiProvider;
   keys: Partial<Record<AiProvider, string>>;
   groqFreeOnly: boolean;
+}
+
+export const DEFAULT_PERSONAS: ChatPersona[] = [];
+
+export function getActivePersona(prefs: Prefs): ChatPersona {
+  const list = Array.isArray(prefs.personas) ? prefs.personas : [];
+  const found = list.find((p) => p.id === prefs.activePersonaId);
+  if (found) return found;
+  if (list.length > 0) return list[0];
+  return {
+    id: "",
+    name: "Sem Persona",
+    avatar: "",
+    age: "",
+    gender: "",
+    bio: "",
+    isOriginal: true,
+  };
 }
 
 export interface Prefs {
@@ -60,6 +81,8 @@ export interface Prefs {
     photos: boolean;
   };
   profile: UserProfile;
+  personas: ChatPersona[];
+  activePersonaId: string;
   instructions: string;
   story: StoryPrefs;
   chatBg: string | null;
@@ -71,16 +94,18 @@ const defaultPrefs: Prefs = {
   focus: { dnd: false, usageLimit: false },
   privacy: { train: false, improve: true },
   features: { artifacts: true, research: true, analysis: true },
-  appearance: "light",
+  appearance: "dark",
   language: "pt-BR",
   connectors: {},
   permissions: { camera: true, mic: true, photos: true },
   profile: {
-    displayName: "Muri",
+    displayName: "",
     age: "",
     gender: "",
     description: "",
   },
+  personas: [],
+  activePersonaId: "",
   instructions: "",
   story: { enabled: false, title: "", body: "", character: "" },
   chatBg: null,
@@ -89,6 +114,9 @@ const defaultPrefs: Prefs = {
 
 interface AppState {
   hydrated: boolean;
+  authUser: AuthUser | null;
+  termsModalOpen: boolean;
+  termsTab: "terms" | "privacy";
   view: MainView;
   sidebarOpen: boolean;
   settingsOpen: boolean;
@@ -96,8 +124,14 @@ interface AppState {
   modelPickerOpen: boolean;
   upgradeOpen: boolean;
   attachOpen: boolean;
+  personaSheetOpen: boolean;
+  personaSheetMode: "list" | "create" | "manage" | "edit";
   voiceOpen: boolean;
   infoOpen: boolean;
+  botCreationOpen: boolean;
+  editingBot: CustomBot | null;
+  customBots: CustomBot[];
+  activeBotId: string | null;
   model: string;
   remoteModels: RemoteModel[];
   conversations: Conversation[];
@@ -111,6 +145,10 @@ interface AppState {
   draft: string;
 
   setHydrated: () => void;
+  setAuthUser: (u: AuthUser | null) => void;
+  logout: () => void;
+  setTermsModalOpen: (open: boolean, tab?: "terms" | "privacy") => void;
+  setTermsTab: (tab: "terms" | "privacy") => void;
   setDraft: (v: string) => void;
   setView: (v: MainView) => void;
   setSidebar: (open: boolean) => void;
@@ -120,14 +158,30 @@ interface AppState {
   setModelPicker: (open: boolean) => void;
   setUpgrade: (open: boolean) => void;
   setAttach: (open: boolean) => void;
+  setPersonaSheet: (
+    open: boolean,
+    mode?: "list" | "create" | "manage" | "edit",
+  ) => void;
+  setActivePersona: (id: string) => void;
+  addPersona: (p: Omit<ChatPersona, "id">) => string;
+  updatePersona: (id: string, p: Partial<ChatPersona>) => void;
+  deletePersona: (id: string) => void;
   setVoice: (open: boolean) => void;
   setInfo: (open: boolean) => void;
   setModel: (m: string) => void;
   setRemoteModels: (m: RemoteModel[]) => void;
-  newChat: (opts?: { temporary?: boolean; projectId?: string }) => string;
+  setBotCreationOpen: (open: boolean, editingBot?: CustomBot | null) => void;
+  openBotCreation: () => void;
+  openBotEdit: (bot: CustomBot) => void;
+  addBot: (b: Omit<CustomBot, "id" | "createdAt" | "messageCount">) => string;
+  updateBot: (id: string, b: Partial<CustomBot>) => void;
+  deleteBot: (id: string) => void;
+  startBotChat: (botId: string) => string;
+  newChat: (opts?: { temporary?: boolean; projectId?: string; botId?: string; title?: string }) => string;
   openConversation: (id: string) => void;
   deleteConversation: (id: string) => void;
   renameConversation: (id: string, title: string) => void;
+  pinConversation: (id: string, pinned: boolean) => void;
   addUserMessage: (content: string) => { convId: string; messages: ChatMessage[] };
   finishAssistant: (convId: string, content: string) => void;
   failAssistant: (convId: string, message?: string) => void;
@@ -149,6 +203,25 @@ function titleFrom(text: string) {
 
 function mergePrefs(saved: Prefs | undefined): Prefs {
   if (!saved) return defaultPrefs;
+  const rawPersonas = Array.isArray(saved.personas) ? saved.personas : [];
+  // Keep only personas created by the user (filter out legacy hardcoded ones)
+  const personas = rawPersonas.filter(
+    (p) => p.id !== "original" && p.id !== "raphael" && p.id !== "kakeru",
+  );
+  const activePersonaId = personas.some((p) => p.id === saved.activePersonaId)
+    ? saved.activePersonaId
+    : personas[0]?.id || "";
+
+  const profile = { ...defaultPrefs.profile, ...saved.profile };
+  if (
+    profile.displayName === "Murilo" ||
+    profile.displayName === "Muri" ||
+    profile.displayName === "Murilo Silva da Costa" ||
+    profile.displayName === "Kakeru"
+  ) {
+    profile.displayName = "";
+  }
+
   return {
     ...defaultPrefs,
     ...saved,
@@ -157,7 +230,9 @@ function mergePrefs(saved: Prefs | undefined): Prefs {
     privacy: { ...defaultPrefs.privacy, ...saved.privacy },
     features: { ...defaultPrefs.features, ...saved.features },
     permissions: { ...defaultPrefs.permissions, ...saved.permissions },
-    profile: { ...defaultPrefs.profile, ...saved.profile },
+    profile,
+    personas,
+    activePersonaId,
     story: { ...defaultPrefs.story, ...saved.story },
     api: {
       ...defaultPrefs.api,
@@ -174,6 +249,9 @@ export const useApp = create<AppState>()(
   persist(
     (set, get) => ({
       hydrated: false,
+      authUser: null,
+      termsModalOpen: false,
+      termsTab: "terms",
       view: "home",
       sidebarOpen: false,
       settingsOpen: false,
@@ -181,8 +259,14 @@ export const useApp = create<AppState>()(
       modelPickerOpen: false,
       upgradeOpen: false,
       attachOpen: false,
+      personaSheetOpen: false,
+      personaSheetMode: "list",
       voiceOpen: false,
       infoOpen: false,
+      botCreationOpen: false,
+      editingBot: null,
+      customBots: [],
+      activeBotId: null,
       model: "flash-lite",
       remoteModels: [],
       conversations: [],
@@ -196,6 +280,11 @@ export const useApp = create<AppState>()(
       draft: "",
 
       setHydrated: () => set({ hydrated: true }),
+      setAuthUser: (authUser) => set({ authUser }),
+      logout: () => set({ authUser: null }),
+      setTermsModalOpen: (termsModalOpen, tab) =>
+        set({ termsModalOpen, ...(tab ? { termsTab: tab } : {}) }),
+      setTermsTab: (termsTab) => set({ termsTab }),
       setDraft: (draft) => set({ draft }),
       setView: (view) => set({ view, sidebarOpen: false }),
       setSidebar: (sidebarOpen) => set({ sidebarOpen }),
@@ -206,35 +295,230 @@ export const useApp = create<AppState>()(
       setModelPicker: (modelPickerOpen) => set({ modelPickerOpen }),
       setUpgrade: (upgradeOpen) => set({ upgradeOpen }),
       setAttach: (attachOpen) => set({ attachOpen }),
+      setPersonaSheet: (personaSheetOpen, mode = "list") =>
+        set({ personaSheetOpen, personaSheetMode: mode }),
+      setBotCreationOpen: (botCreationOpen, editingBot = null) =>
+        set({ botCreationOpen, editingBot: botCreationOpen ? (editingBot ?? null) : null }),
+      openBotCreation: () => set({ botCreationOpen: true, editingBot: null }),
+      openBotEdit: (bot) => set({ botCreationOpen: true, editingBot: bot }),
+      setActivePersona: (id) =>
+        set((s) => {
+          const list =
+            Array.isArray(s.prefs.personas) && s.prefs.personas.length > 0
+              ? s.prefs.personas
+              : [];
+          const persona = list.find((p) => p.id === id) || list[0];
+          const newProfile =
+            persona && !persona.isOriginal
+              ? {
+                  displayName: persona.name,
+                  age: persona.age,
+                  gender: persona.gender,
+                  description: persona.bio,
+                }
+              : {
+                  displayName: "",
+                  age: "",
+                  gender: "",
+                  description: "",
+                };
+          return {
+            prefs: {
+              ...s.prefs,
+              activePersonaId: id,
+              profile: newProfile,
+            },
+          };
+        }),
+      addPersona: (p) => {
+        const id = uid();
+        const newPersona: ChatPersona = { ...p, id };
+        set((s) => ({
+          prefs: {
+            ...s.prefs,
+            personas: [...s.prefs.personas, newPersona],
+            activePersonaId: id,
+            profile: {
+              displayName: newPersona.name,
+              age: newPersona.age,
+              gender: newPersona.gender,
+              description: newPersona.bio,
+            },
+          },
+        }));
+        return id;
+      },
+      updatePersona: (id, p) =>
+        set((s) => {
+          const personas = s.prefs.personas.map((item) =>
+            item.id === id ? { ...item, ...p } : item,
+          );
+          const isActive = s.prefs.activePersonaId === id;
+          const updated = personas.find((item) => item.id === id);
+          return {
+            prefs: {
+              ...s.prefs,
+              personas,
+              profile:
+                isActive && updated && !updated.isOriginal
+                  ? {
+                      displayName: updated.name,
+                      age: updated.age,
+                      gender: updated.gender,
+                      description: updated.bio,
+                    }
+                  : s.prefs.profile,
+            },
+          };
+        }),
+      deletePersona: (id) =>
+        set((s) => {
+          const personas = s.prefs.personas.filter((item) => item.id !== id);
+          const activePersonaId =
+            s.prefs.activePersonaId === id ? "" : s.prefs.activePersonaId;
+          const remainingActive = personas.find((x) => x.id === activePersonaId);
+          return {
+            prefs: {
+              ...s.prefs,
+              personas,
+              activePersonaId,
+              profile:
+                remainingActive && !remainingActive.isOriginal
+                  ? {
+                      displayName: remainingActive.name,
+                      age: remainingActive.age,
+                      gender: remainingActive.gender,
+                      description: remainingActive.bio,
+                    }
+                  : {
+                      displayName: "",
+                      age: "",
+                      gender: "",
+                      description: "",
+                    },
+            },
+          };
+        }),
       setVoice: (voiceOpen) => set({ voiceOpen }),
       setInfo: (infoOpen) => set({ infoOpen }),
       setModel: (model) => set({ model, modelPickerOpen: false }),
       setRemoteModels: (remoteModels) => set({ remoteModels }),
 
-      newChat: (opts) => {
+      addBot: (b) => {
+        const id = uid();
+        const newBot: CustomBot = {
+          ...b,
+          id,
+          createdAt: Date.now(),
+          messageCount: 0,
+        };
+        set((s) => ({
+          customBots: [newBot, ...s.customBots],
+          botCreationOpen: false,
+          editingBot: null,
+        }));
+        return id;
+      },
+
+      updateBot: (id, b) =>
+        set((s) => {
+          const customBots = s.customBots.map((bot) =>
+            bot.id === id ? { ...bot, ...b } : bot,
+          );
+          const conversations = b.name
+            ? s.conversations.map((c) =>
+                c.botId === id ? { ...c, title: b.name! } : c,
+              )
+            : s.conversations;
+          return {
+            customBots,
+            conversations,
+            botCreationOpen: false,
+            editingBot: null,
+          };
+        }),
+
+      deleteBot: (id) =>
+        set((s) => ({
+          customBots: s.customBots.filter((bot) => bot.id !== id),
+          activeBotId: s.activeBotId === id ? null : s.activeBotId,
+          conversations: s.conversations.filter((c) => c.botId !== id),
+          currentId:
+            s.conversations.find((c) => c.id === s.currentId)?.botId === id
+              ? null
+              : s.currentId,
+          view:
+            s.conversations.find((c) => c.id === s.currentId)?.botId === id
+              ? "home"
+              : s.view,
+        })),
+
+      startBotChat: (botId) => {
+        const bot = get().customBots.find((b) => b.id === botId);
+        if (!bot) return "";
+        // Persistent 1:1 binding: check if existing conversation exists for this bot
+        const existing = get().conversations.find((c) => c.botId === botId);
+        if (existing) {
+          set({
+            currentId: existing.id,
+            activeBotId: bot.id,
+            view: "chat",
+            sidebarOpen: false,
+            draft: "",
+          });
+          return existing.id;
+        }
+
+        // Only create new conversation if none exists (e.g. first time or previous was deleted)
         const id = uid();
         const conv: Conversation = {
           id,
-          title: opts?.temporary ? "Bate-papo temporário" : "Novo bate-papo",
-          messages: [],
+          title: bot.name,
+          messages: bot.welcomeMsg
+            ? [
+                {
+                  id: uid(),
+                  role: "assistant",
+                  content: bot.welcomeMsg,
+                  createdAt: Date.now(),
+                },
+              ]
+            : [],
           updatedAt: Date.now(),
-          temporary: opts?.temporary,
-          projectId: opts?.projectId,
+          botId: bot.id,
         };
         set((s) => ({
           conversations: [conv, ...s.conversations],
           currentId: id,
-          view: "home",
+          activeBotId: bot.id,
+          view: "chat",
           sidebarOpen: false,
           draft: "",
         }));
         return id;
       },
 
+      newChat: (opts) => {
+        if (opts?.botId) {
+          return get().startBotChat(opts.botId);
+        }
+        // Remove any unused empty conversations from state
+        set((s) => ({
+          conversations: s.conversations.filter((c) => c.messages.length > 0),
+          currentId: null,
+          activeBotId: null,
+          view: "home",
+          sidebarOpen: false,
+          draft: "",
+        }));
+        return "";
+      },
+
       openConversation: (id) => {
         const conv = get().conversations.find((c) => c.id === id);
         set({
           currentId: id,
+          activeBotId: conv?.botId || null,
           view: conv && conv.messages.length > 0 ? "chat" : "home",
           sidebarOpen: false,
         });
@@ -247,6 +531,7 @@ export const useApp = create<AppState>()(
           return {
             conversations,
             currentId,
+            activeBotId: currentId ? s.activeBotId : null,
             view: currentId ? s.view : "home",
           };
         }),
@@ -255,6 +540,13 @@ export const useApp = create<AppState>()(
         set((s) => ({
           conversations: s.conversations.map((c) =>
             c.id === id ? { ...c, title } : c,
+          ),
+        })),
+
+      pinConversation: (id, pinned) =>
+        set((s) => ({
+          conversations: s.conversations.map((c) =>
+            c.id === id ? { ...c, pinned } : c,
           ),
         })),
 
@@ -409,11 +701,15 @@ export const useApp = create<AppState>()(
         return {
           ...current,
           ...p,
+          authUser: p.authUser ?? current.authUser,
+          customBots: Array.isArray(p.customBots) ? p.customBots : current.customBots,
           prefs: mergePrefs(p.prefs),
           model: typeof p.model === "string" ? p.model : current.model,
         };
       },
       partialize: (s) => ({
+        authUser: s.authUser,
+        customBots: s.customBots,
         conversations: s.conversations.filter((c) => !c.temporary),
         currentId: s.currentId,
         projects: s.projects,

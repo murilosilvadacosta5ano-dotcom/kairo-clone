@@ -3,7 +3,7 @@ import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "Claude";
+const APP_NAME = "Kairo";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -15,10 +15,10 @@ export const Route = createRootRoute({
           "width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1",
       },
       { title: APP_NAME },
-      { name: "theme-color", content: "#F5F4F0" },
+      { name: "theme-color", content: "#000000" },
       {
         name: "description",
-        content: "Converse com o Claude — assistente de IA.",
+        content: "Converse com o Kairo — assistente de IA.",
       },
     ],
     links: [
@@ -39,11 +39,11 @@ export const Route = createRootRoute({
     ],
   }),
   component: () => (
-    <html lang="pt-BR" suppressHydrationWarning className="antialiased">
+    <html lang="pt-BR" suppressHydrationWarning className="dark antialiased">
       <head>
         <HeadContent />
       </head>
-      <body>
+      <body suppressHydrationWarning>
         <PreviewHostBridge />
         <AuthProvider>
           <Outlet />

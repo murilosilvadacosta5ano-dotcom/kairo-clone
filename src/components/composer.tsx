@@ -1,7 +1,6 @@
 import { useRef } from "react";
-import { ArrowUp, Menu } from "lucide-react";
-import { useApp } from "@/lib/store";
-import { USER } from "@/lib/types";
+import { ArrowUp, Ban, User } from "lucide-react";
+import { useApp, getActivePersona } from "@/lib/store";
 import { cn } from "@/lib/utils";
 import { askClaude } from "@/lib/ask";
 
@@ -9,21 +8,22 @@ export function Composer({ compact }: { compact?: boolean }) {
   const draft = useApp((s) => s.draft);
   const setDraft = useApp((s) => s.setDraft);
   const sending = useApp((s) => s.sending);
-  const setAttach = useApp((s) => s.setAttach);
-  const openSettings = useApp((s) => s.openSettings);
+  const setPersonaSheet = useApp((s) => s.setPersonaSheet);
+  const setActivePersona = useApp((s) => s.setActivePersona);
   const conversations = useApp((s) => s.conversations);
   const currentId = useApp((s) => s.currentId);
-  const profileName = useApp((s) => s.prefs.profile.displayName);
-  const story = useApp((s) => s.prefs.story);
+  const customBots = useApp((s) => s.customBots);
+  const prefs = useApp((s) => s.prefs);
+  const personas = (prefs.personas || []).filter(
+    (p) => !p.isOriginal && p.id !== "original" && p.id !== "raphael" && p.id !== "kakeru",
+  );
+  const activePersona = getActivePersona(prefs);
   const onSend = useSend();
   const ref = useRef<HTMLTextAreaElement>(null);
   const hasText = draft.trim().length > 0;
   const conv = conversations.find((c) => c.id === currentId);
-  const replyTo = conv?.title && conv.messages.length > 0 ? conv.title : "Claude";
-  const chip =
-    (story.enabled && story.character.trim()) ||
-    profileName.trim() ||
-    USER.firstName;
+  const bot = conv?.botId ? customBots.find((b) => b.id === conv.botId) : null;
+  const replyTo = bot ? bot.name : (conv?.title && conv.messages.length > 0 ? conv.title : "Kairo");
 
   function resize() {
     const el = ref.current;
@@ -33,14 +33,67 @@ export function Composer({ compact }: { compact?: boolean }) {
   }
 
   return (
-    <div className={cn("px-3 pb-3 pt-1", compact && "pb-3")}>
-      <div className="rounded-[28px] bg-bar px-4 pb-3 pt-3.5">
+    <div className={cn("relative w-full px-2 sm:px-3 pt-1", compact ? "pb-2 sm:pb-3" : "pb-3 sm:pb-4")}>
+      {/* Composer search bar - single line inline layout, centered vertically */}
+      <div className="relative z-10 flex min-h-[54px] items-center gap-2.5 rounded-[28px] bg-black/55 hover:bg-black/65 focus-within:bg-black/70 backdrop-blur-2xl backdrop-saturate-150 p-1.5 pl-2.5 pr-2 shadow-[0_10px_35px_rgba(0,0,0,0.5),inset_0_1px_1px_rgba(255,255,255,0.12)] border border-white/5 transition-all">
+        {/* Left: Persona round photo avatar bubble with native select options */}
+        <div className="relative size-10 shrink-0 flex items-center justify-center">
+          <div
+            title={activePersona.name ? `Perfil: ${activePersona.name}` : "Perfil"}
+            className="size-10 overflow-hidden rounded-full bg-[#24252e] ring-1 ring-white/10 hover:ring-2 hover:ring-white/20 transition-all shadow-sm flex items-center justify-center pointer-events-none"
+          >
+            {activePersona.avatar ? (
+              <img
+                src={activePersona.avatar}
+                alt={activePersona.name}
+                className="size-full object-cover"
+              />
+            ) : activePersona.isOriginal ? (
+              <Ban className="size-4 text-zinc-400" />
+            ) : (
+              <User className="size-4 text-zinc-300" />
+            )}
+          </div>
+
+          <select
+            suppressHydrationWarning
+            value={activePersona.id || ""}
+            aria-label="Opções de perfil"
+            style={{ fontSize: "16px" }}
+            onChange={(e) => {
+              const val = e.target.value;
+              if (val === "gerenciar perfils" || val === "manage") {
+                setPersonaSheet(true, "manage");
+              } else if (val === "criar perfil" || val === "create" || val === "pro") {
+                setPersonaSheet(true, "create");
+              } else if (val) {
+                setActivePersona(val);
+              }
+            }}
+            className="absolute inset-0 size-full cursor-pointer opacity-0"
+          >
+            {personas.map((p) => (
+              <option key={p.id} value={p.id} className="bg-[#1f2029] text-white">
+                {p.name}
+              </option>
+            ))}
+            <option value="criar perfil" className="bg-[#1f2029] text-white">
+              criar perfil
+            </option>
+            <option value="gerenciar perfils" className="bg-[#1f2029] text-white">
+              gerenciar perfils
+            </option>
+          </select>
+        </div>
+
+        {/* Center: Textarea inline in a single row, vertically aligned */}
         <textarea
           ref={ref}
           rows={1}
           value={draft}
           disabled={sending}
           placeholder={`Responder · ${replyTo}.`}
+          suppressHydrationWarning
           onChange={(e) => {
             setDraft(e.target.value);
             resize();
@@ -51,74 +104,26 @@ export function Composer({ compact }: { compact?: boolean }) {
               if (hasText && !sending) onSend();
             }
           }}
-          className="max-h-[120px] w-full resize-none bg-transparent text-[17px] leading-snug text-bar-fg outline-none placeholder:text-bar-muted disabled:opacity-60"
+          className="max-h-[110px] flex-1 resize-none self-center bg-transparent py-2 px-1.5 text-[15.5px] leading-relaxed text-white outline-none placeholder:text-zinc-500 disabled:opacity-60 overflow-y-auto no-scrollbar"
         />
 
-        <div className="mt-3 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => openSettings("profile")}
-            className="press flex h-10 items-center gap-2 rounded-full border border-bar-line bg-bar-chip py-1 pl-1 pr-3.5 text-bar-fg"
-          >
-            <MuriAvatar />
-            <span className="max-w-[140px] truncate text-[15px] font-medium">
-              {chip}
-            </span>
-          </button>
-
-          {story.enabled ? (
-            <button
-              type="button"
-              onClick={() => openSettings("story")}
-              className="press flex h-10 items-center rounded-full border border-bar-line px-3 text-[13px] font-medium text-bar-fg"
-            >
-              História
-            </button>
-          ) : null}
-
-          <div className="flex-1" />
-
-          {hasText ? (
-            <button
-              type="button"
-              aria-label="Enviar"
-              disabled={sending}
-              onClick={onSend}
-              className="press flex size-11 shrink-0 items-center justify-center rounded-full border border-bar-line bg-bar-chip text-bar-fg disabled:opacity-40"
-            >
-              <ArrowUp className="size-5" strokeWidth={2.2} />
-            </button>
-          ) : (
-            <button
-              type="button"
-              aria-label="Mais opções"
-              onClick={() => setAttach(true)}
-              className="press flex size-11 shrink-0 items-center justify-center rounded-full border border-bar-line text-bar-fg"
-            >
-              <Menu className="size-5" strokeWidth={2} />
-            </button>
+        {/* Right: Send button formatted as a Pill */}
+        <button
+          type="button"
+          aria-label="Enviar mensagem"
+          disabled={sending || !hasText}
+          onClick={onSend}
+          className={cn(
+            "press flex h-10 px-4 min-w-[54px] shrink-0 items-center justify-center rounded-full text-white shadow-sm transition-all",
+            hasText && !sending
+              ? "bg-white text-black hover:bg-zinc-200 active:scale-95 font-semibold cursor-pointer"
+              : "bg-white/10 text-zinc-500 opacity-60 cursor-not-allowed",
           )}
-        </div>
+        >
+          <ArrowUp className={cn("size-4.5 stroke-[2.5]", hasText && !sending ? "text-black" : "text-zinc-500")} />
+        </button>
       </div>
     </div>
-  );
-}
-
-function MuriAvatar() {
-  return (
-    <svg viewBox="0 0 36 36" className="size-8 shrink-0" aria-hidden="true">
-      <circle cx="18" cy="18" r="18" fill="#d7c4b0" />
-      <circle cx="18" cy="18" r="17" fill="#f0d5c0" />
-      <path d="M6 28c2-8 7-12 12-12s10 4 12 12" fill="#3d2a1c" />
-      <path d="M8 16c1-9 5-13 10-13s9 4 10 13c-2-3-6-5-10-5s-8 2-10 5Z" fill="#3a2418" />
-      <path d="M11 15c2-1 4-2 7-2s5 1 7 2" fill="none" stroke="#2a1810" strokeWidth="1.2" />
-      <circle cx="13.2" cy="19.2" r="1.15" fill="#1a1210" />
-      <circle cx="22.8" cy="19.2" r="1.15" fill="#1a1210" />
-      <path d="M12.2 19.2h2.2M21.6 19.2h2.2" stroke="#1a1210" strokeWidth="1.3" strokeLinecap="round" />
-      <path d="M11 19.2c0-1.6 1-2.4 2.2-2.4s2.2.8 2.2 2.4" fill="none" stroke="#1a1210" strokeWidth="1.15" />
-      <path d="M20.6 19.2c0-1.6 1-2.4 2.2-2.4s2.2.8 2.2 2.4" fill="none" stroke="#1a1210" strokeWidth="1.15" />
-      <path d="M16.2 23.2c.7.8 2.9.8 3.6 0" fill="none" stroke="#c47a6a" strokeWidth="1.1" strokeLinecap="round" />
-    </svg>
   );
 }
 
@@ -131,12 +136,19 @@ function useSend() {
   const sending = useApp((s) => s.sending);
   const model = useApp((s) => s.model);
   const prefs = useApp((s) => s.prefs);
+  const conversations = useApp((s) => s.conversations);
+  const customBots = useApp((s) => s.customBots);
 
   return async function send() {
     const text = draft.trim();
     if (!text || sending) return;
     const { convId, messages } = addUserMessage(text);
     const provider = prefs.api.provider;
+    const activePersona = getActivePersona(prefs);
+
+    const conv = conversations.find((c) => c.id === convId);
+    const bot = conv?.botId ? customBots.find((b) => b.id === conv.botId) : null;
+
     try {
       const res = await askClaude({
         data: {
@@ -146,7 +158,26 @@ function useSend() {
           apiKey: prefs.api.keys[provider],
           instructions: prefs.instructions,
           profile: prefs.profile,
+          persona: activePersona,
           story: prefs.story,
+          bot: bot
+            ? {
+                id: bot.id,
+                name: bot.name,
+                gender: bot.gender,
+                intro: bot.intro,
+                personality: bot.personality,
+                welcomeMsg: bot.welcomeMsg,
+                scenario: bot.scenario,
+                instructions: bot.instructions,
+                storyMode: bot.storyMode,
+                storyTitle: bot.storyTitle,
+                storyBody: bot.storyBody,
+                storyCharacter: bot.storyCharacter,
+                likes: bot.likes,
+                tags: bot.tags,
+              }
+            : undefined,
         },
       });
       if (res.ok) {

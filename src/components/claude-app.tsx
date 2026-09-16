@@ -6,6 +6,9 @@ import { Sidebar } from "./sidebar";
 import { HomeView } from "./home-view";
 import { ChatView } from "./chat-view";
 import { SettingsSheet } from "./settings";
+import { LoginView } from "./login-view";
+import { BotsView, BotCreationModal } from "./bots-view";
+import { TermsModal } from "./terms-modal";
 import {
   ArtifactDetail,
   ArtifactsView,
@@ -15,17 +18,22 @@ import {
   ProjectsView,
 } from "./views";
 import {
-  AttachSheet,
   InfoSheet,
   ModelPicker,
   UpgradeSheet,
   VoiceSheet,
 } from "./sheets";
+import { PersonaSheet } from "./persona-sheet";
 
 export function ClaudeApp() {
+  const hydrated = useApp((s) => s.hydrated);
+  const authUser = useApp((s) => s.authUser);
   const view = useApp((s) => s.view);
   const sidebarOpen = useApp((s) => s.sidebarOpen);
   const appearance = useApp((s) => s.prefs.appearance);
+  const botCreationOpen = useApp((s) => s.botCreationOpen);
+  const editingBot = useApp((s) => s.editingBot);
+  const setBotCreationOpen = useApp((s) => s.setBotCreationOpen);
   const setHydrated = useApp((s) => s.setHydrated);
 
   useEffect(() => {
@@ -44,19 +52,26 @@ export function ClaudeApp() {
   useEffect(() => {
     const root = document.documentElement;
     const apply = (a: string) => {
-      const dark =
-        a === "dark" ||
-        (a === "system" &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches);
+      const dark = a !== "light";
       root.classList.toggle("dark", dark);
     };
-    apply(appearance);
+    apply(appearance || "dark");
     if (appearance !== "system") return;
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = () => apply("system");
     mq.addEventListener("change", onChange);
     return () => mq.removeEventListener("change", onChange);
   }, [appearance]);
+
+  // Show login screen if user is not authenticated
+  if (hydrated && (!authUser || !authUser.isLoggedIn)) {
+    return (
+      <div className="h-dvh w-full overflow-hidden bg-bg">
+        <LoginView />
+        <TermsModal />
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-dvh overflow-hidden bg-bg">
@@ -70,6 +85,7 @@ export function ClaudeApp() {
         <main className="min-h-0 min-w-0 flex-1">
           {view === "home" ? <HomeView /> : null}
           {view === "chat" ? <ChatView /> : null}
+          {view === "bots" ? <BotsView /> : null}
           {view === "conversations" ? <ConversationsView /> : null}
           {view === "projects" ? <ProjectsView /> : null}
           {view === "project" ? <ProjectDetail /> : null}
@@ -81,9 +97,16 @@ export function ClaudeApp() {
       <SettingsSheet />
       <ModelPicker />
       <UpgradeSheet />
-      <AttachSheet />
+      <PersonaSheet />
       <VoiceSheet />
       <InfoSheet />
+      <TermsModal />
+      {botCreationOpen && (
+        <BotCreationModal
+          editingBot={editingBot}
+          onClose={() => setBotCreationOpen(false)}
+        />
+      )}
     </div>
   );
 }

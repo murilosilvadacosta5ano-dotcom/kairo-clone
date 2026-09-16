@@ -1,7 +1,6 @@
-import { Menu } from "lucide-react";
-import { GhostIcon } from "./claude-mark";
+import { ChevronDown, Menu } from "lucide-react";
 import { useApp } from "@/lib/store";
-import { modelLabel } from "@/lib/types";
+import { visibleModels } from "@/lib/types";
 
 export function TopBar({
   right,
@@ -9,44 +8,47 @@ export function TopBar({
   right?: React.ReactNode;
 }) {
   const setSidebar = useApp((s) => s.setSidebar);
-  const setModelPicker = useApp((s) => s.setModelPicker);
-  const newChat = useApp((s) => s.newChat);
   const model = useApp((s) => s.model);
+  const setModel = useApp((s) => s.setModel);
   const remote = useApp((s) => s.remoteModels);
-  const modelName = modelLabel(model, remote);
+  const models = visibleModels(remote);
 
   return (
-    <header className="flex items-center gap-1 border-b border-hairline px-2 pb-1.5 pt-[max(8px,env(safe-area-inset-top))]">
+    <header className="relative z-30 flex items-center justify-between px-3.5 pb-2.5 pt-[max(10px,env(safe-area-inset-top))] bg-gradient-to-b from-black/60 via-black/20 to-transparent">
       <button
         type="button"
         aria-label="Menu"
         onClick={() => setSidebar(true)}
-        className="press flex size-11 shrink-0 items-center justify-center text-fg md:invisible"
+        className="press flex size-10 shrink-0 items-center justify-center rounded-full bg-white/[0.07] hover:bg-white/[0.14] backdrop-blur-xl border border-white/10 text-white md:invisible transition-all shadow-[0_4px_16px_rgba(0,0,0,0.3)]"
       >
-        <Menu className="size-6" strokeWidth={1.7} />
+        <Menu className="size-5" strokeWidth={1.8} />
       </button>
 
+      {/* iOS style standard select for model picker */}
       <div className="flex min-w-0 flex-1 justify-center">
-        <button
-          type="button"
-          aria-label="Escolher modelo"
-          onClick={() => setModelPicker(true)}
-          className="press flex h-10 max-w-full items-center gap-2 rounded-full border border-bar-line bg-bar px-3.5 text-bar-fg"
-        >
-          <span className="truncate text-[15px] font-medium">{modelName}</span>
-        </button>
+        <div className="relative inline-flex items-center">
+          <select
+            suppressHydrationWarning
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            style={{ fontSize: "16px" }}
+            aria-label="Selecionar Modelo"
+            className="appearance-none bg-white/[0.08] hover:bg-white/[0.13] backdrop-blur-xl border border-white/10 text-white rounded-full pl-4 pr-9 py-1.5 text-[16px] font-medium outline-none cursor-pointer shadow-[0_4px_16px_rgba(0,0,0,0.25)] transition-all"
+          >
+            {models.map((m) => (
+              <option key={m.id} value={m.id} className="bg-[#181920] text-white">
+                {m.name}
+              </option>
+            ))}
+          </select>
+          <ChevronDown
+            className="pointer-events-none absolute right-3 size-4 text-blue-400"
+            strokeWidth={2.4}
+          />
+        </div>
       </div>
 
-      {right ?? (
-        <button
-          type="button"
-          aria-label="Bate-papo temporário"
-          onClick={() => newChat({ temporary: true })}
-          className="press flex size-11 shrink-0 items-center justify-center text-fg"
-        >
-          <GhostIcon className="size-[22px]" />
-        </button>
-      )}
+      {right ?? <div className="size-10 shrink-0 invisible" />}
     </header>
   );
 }

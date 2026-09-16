@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
+import { AnimatedFace } from "./animated-face";
 import { ChatStage } from "./chat-stage";
-import { ClaudeMark } from "./claude-mark";
 import { Composer } from "./composer";
 import { TopBar } from "./top-bar";
 import { useApp } from "@/lib/store";
@@ -23,14 +23,14 @@ export function HomeView() {
 
       <div className="flex min-h-0 flex-1 flex-col items-center justify-center px-6">
         <div className="greeting-in flex flex-col items-center">
-          <ClaudeMark className="mb-5 size-[42px] text-accent" />
-          <h2 className="font-display text-center text-[32px] font-medium leading-[1.15] tracking-[-0.02em] text-fg md:text-[36px]">
+          <AnimatedFace className="mb-4" size="md" lookAngle="right" />
+          <h2 className="font-display text-center text-[26px] font-medium leading-[1.15] tracking-[-0.02em] text-white md:text-[28px]">
             {greet}, {name}
           </h2>
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-2xl pb-[max(6px,env(safe-area-inset-bottom))]">
+      <div className="mx-auto w-full max-w-2xl px-2 sm:px-4 pb-[max(16px,calc(env(safe-area-inset-bottom)+12px))]">
         <Composer />
       </div>
     </ChatStage>

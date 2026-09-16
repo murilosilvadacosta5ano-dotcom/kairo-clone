@@ -1,8 +1,6 @@
 import { cn } from "@/lib/utils";
 
-const SPARK_RAYS = [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330];
-
-export function ClaudeMark({
+export function KairoCreature({
   className,
   thinking,
 }: {
@@ -12,25 +10,134 @@ export function ClaudeMark({
   return (
     <svg
       viewBox="0 0 64 64"
-      className={cn(thinking && "think-mark", className)}
+      className={cn("shrink-0", thinking ? "creature-thinking" : "creature-animated", className)}
       fill="none"
-      aria-hidden="true"
+      xmlns="http://www.w3.org/2000/svg"
+      aria-label="Kairo"
+      role="img"
     >
-      <g stroke="currentColor" strokeWidth="3.15" strokeLinecap="round">
-        {SPARK_RAYS.map((deg, i) => (
-          <line
-            key={deg}
-            transform={`rotate(${deg} 32 32)`}
-            x1="32"
-            y1={i % 2 === 0 ? 3.5 : 10}
-            x2="32"
-            y2="25.5"
-          />
-        ))}
-      </g>
+      <defs>
+        {/* Soft 3D grey sphere gradient */}
+        <radialGradient
+          id="kairo-body-grad"
+          cx="38%"
+          cy="32%"
+          r="62%"
+          fx="32%"
+          fy="26%"
+        >
+          <stop offset="0%" stopColor="#94a3b8" />
+          <stop offset="28%" stopColor="#64748b" />
+          <stop offset="70%" stopColor="#475569" />
+          <stop offset="100%" stopColor="#334155" />
+        </radialGradient>
+
+        {/* Soft shadow */}
+        <radialGradient id="kairo-shadow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#000000" stopOpacity="0.4" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0" />
+        </radialGradient>
+
+        {/* Eye shine gradient */}
+        <linearGradient id="kairo-eye-grad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#09090b" />
+          <stop offset="100%" stopColor="#18181b" />
+        </linearGradient>
+      </defs>
+
+      {/* Ground soft shadow */}
+      <ellipse cx="32" cy="57" rx="16" ry="3.5" fill="url(#kairo-shadow)" />
+
+      {/* Little cute rounded ears/bumps */}
+      <circle cx="21" cy="19" r="5" fill="#475569" />
+      <circle cx="21" cy="19" r="3.2" fill="#64748b" />
+      <circle cx="43" cy="19" r="5" fill="#475569" />
+      <circle cx="43" cy="19" r="3.2" fill="#64748b" />
+
+      {/* Main round grey creature body */}
+      <circle
+        cx="32"
+        cy="35"
+        r="21.5"
+        fill="url(#kairo-body-grad)"
+      />
+
+      {/* Soft light highlight on top of head */}
+      <ellipse
+        cx="30"
+        cy="19"
+        rx="10"
+        ry="4"
+        fill="#cbd5e1"
+        fillOpacity="0.45"
+      />
+
+      {/* Cute little rosy cheeks */}
+      <ellipse cx="19" cy="39" rx="3.5" ry="2" fill="#f43f5e" fillOpacity="0.25" />
+      <ellipse cx="45" cy="39" rx="3.5" ry="2" fill="#f43f5e" fillOpacity="0.25" />
+
+      {/* Eyes & expression */}
+      {thinking ? (
+        <>
+          {/* Curious thinking eyes looking slightly up */}
+          <g>
+            {/* Left Eye */}
+            <ellipse cx="23.5" cy="31.5" rx="4.2" ry="5.2" fill="url(#kairo-eye-grad)" />
+            {/* Left Sparkle reflection */}
+            <circle cx="22.2" cy="29.2" r="1.8" fill="#ffffff" />
+            <circle cx="24.8" cy="33.2" r="0.9" fill="#ffffff" />
+
+            {/* Right Eye */}
+            <ellipse cx="39.5" cy="31.5" rx="4.2" ry="5.2" fill="url(#kairo-eye-grad)" />
+            {/* Right Sparkle reflection */}
+            <circle cx="38.2" cy="29.2" r="1.8" fill="#ffffff" />
+            <circle cx="40.8" cy="33.2" r="0.9" fill="#ffffff" />
+
+            {/* Tiny curious cute mouth - small 'o' */}
+            <ellipse cx="31.5" cy="39" rx="1.6" ry="2.1" fill="#1e293b" />
+          </g>
+          {/* Small thought sparkles / bubbles */}
+          <circle cx="49" cy="15" r="1.6" fill="#93c5fd" fillOpacity="0.9" />
+          <circle cx="53" cy="10" r="2.2" fill="#60a5fa" fillOpacity="0.95" />
+        </>
+      ) : (
+        <>
+          {/* Normal happy cute round eyes */}
+          <g>
+            {/* Left Eye */}
+            <ellipse cx="23" cy="33.5" rx="4.2" ry="5.4" fill="url(#kairo-eye-grad)" />
+            {/* Big glossy sparkle */}
+            <circle cx="21.5" cy="31.5" r="1.9" fill="#ffffff" />
+            <circle cx="24.5" cy="35.2" r="0.9" fill="#ffffff" />
+
+            {/* Right Eye */}
+            <ellipse cx="41" cy="33.5" rx="4.2" ry="5.4" fill="url(#kairo-eye-grad)" />
+            {/* Big glossy sparkle */}
+            <circle cx="39.5" cy="31.5" r="1.9" fill="#ffffff" />
+            <circle cx="42.5" cy="35.2" r="0.9" fill="#ffffff" />
+
+            {/* Tiny sweet smile */}
+            <path
+              d="M29.5 38.5 Q32 41 34.5 38.5"
+              fill="none"
+              stroke="#1e293b"
+              strokeWidth="1.6"
+              strokeLinecap="round"
+            />
+          </g>
+        </>
+      )}
+
+      {/* Tiny soft little paws / feet */}
+      <ellipse cx="24" cy="54.5" rx="4.5" ry="2" fill="#475569" />
+      <ellipse cx="40" cy="54.5" rx="4.5" ry="2" fill="#475569" />
     </svg>
   );
 }
+
+// Alias for backwards compatibility with existing component imports
+export const ClaudeMark = KairoCreature;
+export const KairoMark = KairoCreature;
 
 export function WaveformIcon({ className }: { className?: string }) {
   return (

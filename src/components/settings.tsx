@@ -1,50 +1,37 @@
 import type { ReactNode } from "react";
 import { useEffect, useState } from "react";
 import {
-  Bell,
-  BookOpen,
+  Ban,
   Check,
   ChevronLeft,
   ChevronRight,
-  CircleDollarSign,
   CircleUser,
   Image as ImageIcon,
   KeyRound,
   Languages,
-  LayoutGrid,
-  Link as LinkIcon,
   LogOut,
-  MoonStar,
-  Palette,
   ScrollText,
   Shield,
   SlidersHorizontal,
-  Users,
+  Upload,
+  User,
   X,
 } from "lucide-react";
 import { loadRemoteModels } from "@/lib/load-models";
-import { useApp } from "@/lib/store";
+import { useApp, getActivePersona } from "@/lib/store";
 import { PROVIDERS, USER, type AiProvider, type SettingsPage } from "@/lib/types";
 import { cn, compressImage, initialsFrom } from "@/lib/utils";
 
 const ACCOUNT = [
   { id: "profile" as const, label: "Perfil", Icon: CircleUser },
-  { id: "billing" as const, label: "Cobrança", Icon: CircleDollarSign },
-  { id: "notifications" as const, label: "Notificações", Icon: Bell },
-  { id: "focus" as const, label: "Tempo e foco", Icon: MoonStar },
   { id: "privacy" as const, label: "Privacidade", Icon: Shield },
-  { id: "shared" as const, label: "Links compartilhados", Icon: LinkIcon },
 ];
 
 const APP = [
-  { id: "features" as const, label: "Recursos", Icon: SlidersHorizontal },
-  { id: "connectors" as const, label: "Connectors", Icon: LayoutGrid },
-  { id: "permissions" as const, label: "Permissões", Icon: Users },
-  { id: "appearance" as const, label: "Aparência", Icon: Palette },
-  { id: "language" as const, label: "Idioma", Icon: Languages },
-  { id: "instructions" as const, label: "Instruções", Icon: ScrollText },
-  { id: "api" as const, label: "API", Icon: KeyRound },
   { id: "background" as const, label: "Fundo do chat", Icon: ImageIcon },
+  { id: "api" as const, label: "API", Icon: KeyRound },
+  { id: "instructions" as const, label: "Instruções", Icon: ScrollText },
+  { id: "language" as const, label: "Idioma", Icon: Languages },
 ];
 
 const TITLES: Record<SettingsPage, string> = {
@@ -73,11 +60,10 @@ export function SettingsSheet() {
   const close = useApp((s) => s.closeSettings);
   const setPage = useApp((s) => s.setSettingsPage);
   const setInfo = useApp((s) => s.setInfo);
-  const setUpgrade = useApp((s) => s.setUpgrade);
 
   if (!open) return null;
 
-  const backTo = page === "story" ? "instructions" : "index";
+  const backTo = "index";
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center md:items-center">
@@ -137,45 +123,22 @@ export function SettingsSheet() {
         </header>
 
         <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto px-4 pb-10">
-          {page === "index" ? (
-            <IndexPage onUpgrade={() => setUpgrade(true)} />
-          ) : (
-            <DetailPage page={page} />
-          )}
+          {page === "index" ? <IndexPage /> : <DetailPage page={page} />}
         </div>
       </div>
     </div>
   );
 }
 
-function IndexPage({ onUpgrade }: { onUpgrade: () => void }) {
+function IndexPage() {
   const setPage = useApp((s) => s.setSettingsPage);
   const resetAll = useApp((s) => s.resetAll);
   const close = useApp((s) => s.closeSettings);
 
   return (
     <>
-      <div className="mb-3 rounded-group bg-muted px-4 py-3.5">
+      <div className="mb-4 rounded-group bg-muted px-4 py-3.5">
         <p className="truncate text-[16px] text-fg">{USER.email}</p>
-      </div>
-
-      <div
-        className="mb-6 rounded-group bg-surface px-5 py-5"
-        style={{ boxShadow: "var(--shadow-card)" }}
-      >
-        <h2 className="text-[18px] font-semibold tracking-tight">
-          Obter mais Claude
-        </h2>
-        <p className="mt-1 text-[15px] leading-snug text-fg-muted">
-          Faça upgrade para mais uso e recursos
-        </p>
-        <button
-          type="button"
-          onClick={onUpgrade}
-          className="press mt-4 inline-flex h-11 items-center rounded-pill bg-ink px-5 text-[15px] font-medium text-surface"
-        >
-          Fazer upgrade
-        </button>
       </div>
 
       <Section label="Conta">
@@ -224,184 +187,208 @@ function IndexPage({ onUpgrade }: { onUpgrade: () => void }) {
   );
 }
 
+function ProfileDetailPage() {
+  const prefs = useApp((s) => s.prefs);
+  const patch = useApp((s) => s.patchPrefs);
+  const activePersona = getActivePersona(prefs);
+  const personas = prefs.personas || [];
+  const setActivePersona = useApp((s) => s.setActivePersona);
+  const updatePersona = useApp((s) => s.updatePersona);
+  const setPersonaSheet = useApp((s) => s.setPersonaSheet);
+  const closeSettings = useApp((s) => s.closeSettings);
+
+  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        updatePersona(activePersona.id, { avatar: reader.result });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  return (
+    <>
+      {/* Character / Persona Selector Header */}
+      <div className="mb-4 flex flex-col items-center py-2">
+        <div className="relative mb-2 size-20 rounded-full overflow-hidden bg-muted flex items-center justify-center border-2 border-border shadow-sm">
+          {activePersona.isOriginal ? (
+            <Ban className="size-8 text-fg-muted" />
+          ) : activePersona.avatar ? (
+            <img
+              src={activePersona.avatar}
+              alt={activePersona.name}
+              className="size-full object-cover"
+            />
+          ) : (
+            <span className="text-[20px] font-semibold">
+              {initialsFrom(activePersona.name, USER.initials)}
+            </span>
+          )}
+
+          {!activePersona.isOriginal && (
+            <label className="absolute inset-0 bg-black/40 opacity-0 hover:opacity-100 flex items-center justify-center transition-opacity text-white cursor-pointer">
+              <Upload className="size-5" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handlePhotoUpload}
+                className="hidden"
+              />
+            </label>
+          )}
+        </div>
+
+        <p className="text-[17px] font-semibold">{activePersona.name}</p>
+        <p className="text-[13px] text-fg-muted">
+          {activePersona.gender || "Sem gênero"} • {activePersona.age || "Idade livre"}
+        </p>
+
+        <button
+          type="button"
+          onClick={() => {
+            closeSettings();
+            setPersonaSheet(true);
+          }}
+          className="press mt-3 flex items-center gap-1.5 rounded-full bg-accent/15 px-3.5 py-1 text-[13px] font-medium text-accent hover:bg-accent/25 transition-all"
+        >
+          <SlidersHorizontal className="size-3.5" />
+          Abrir aba de Personas
+        </button>
+      </div>
+
+      {/* Quick Persona Switcher */}
+      <div className="mb-4">
+        <p className="mb-2 px-1 text-[13px] font-medium text-fg-muted">
+          Trocar Personagem Ativo
+        </p>
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+          {personas.map((item) => {
+            const isSelected = item.id === activePersona.id;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setActivePersona(item.id)}
+                className={cn(
+                  "press flex items-center gap-2 rounded-full px-3 py-1.5 text-[13.5px] font-medium border transition-all shrink-0",
+                  isSelected
+                    ? "bg-fg text-bg border-transparent font-semibold shadow-sm"
+                    : "bg-muted text-fg hover:bg-muted-2 border-border/50",
+                )}
+              >
+                <div className="size-5 rounded-full overflow-hidden bg-muted-2 flex items-center justify-center shrink-0">
+                  {item.isOriginal ? (
+                    <Ban className="size-3 text-fg-muted" />
+                  ) : item.avatar ? (
+                    <img src={item.avatar} alt={item.name} className="size-full object-cover" />
+                  ) : (
+                    <User className="size-3 text-fg-muted" />
+                  )}
+                </div>
+                <span>{item.name}</span>
+                {isSelected && <Check className="size-3.5 stroke-[3]" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <Group>
+        <Field
+          label="Nome do Personagem"
+          value={activePersona.name}
+          placeholder="Nome"
+          disabled={activePersona.isOriginal}
+          onChange={(name) => {
+            updatePersona(activePersona.id, { name });
+            patch((prev) => ({ ...prev, profile: { ...prev.profile, displayName: name } }));
+          }}
+        />
+        <Field
+          label="Idade"
+          value={activePersona.age}
+          placeholder="Ex.: 18 anos"
+          disabled={activePersona.isOriginal}
+          onChange={(age) => {
+            updatePersona(activePersona.id, { age });
+            patch((prev) => ({ ...prev, profile: { ...prev.profile, age } }));
+          }}
+        />
+        <label className="block px-4 py-3">
+          <span className="mb-1 block text-[13px] text-fg-muted">Gênero</span>
+          <select
+            value={activePersona.gender}
+            disabled={activePersona.isOriginal}
+            onChange={(e) => {
+              const gender = e.target.value;
+              updatePersona(activePersona.id, { gender });
+              patch((prev) => ({
+                ...prev,
+                profile: { ...prev.profile, gender },
+              }));
+            }}
+            className="h-8 w-full bg-transparent text-[16px] outline-none disabled:opacity-50"
+          >
+            <option value="">Não informar</option>
+            <option value="Masculino">Masculino ♂</option>
+            <option value="Feminino">Feminino ♀</option>
+            <option value="Não-binário">Não-binário ⚧</option>
+            <option value="Outro">Outro</option>
+          </select>
+        </label>
+      </Group>
+
+      <p className="mb-2 mt-5 px-1 text-[13px] font-medium text-fg-muted">
+        Biografia / Descrição / Personalidade
+      </p>
+      <textarea
+        value={activePersona.bio}
+        rows={5}
+        disabled={activePersona.isOriginal}
+        placeholder="Ex.: sou um humano comum, fraco comparado aos heróis da história."
+        onChange={(e) => {
+          const bio = e.target.value;
+          updatePersona(activePersona.id, { bio });
+          patch((prev) => ({
+            ...prev,
+            profile: { ...prev.profile, description: bio },
+          }));
+        }}
+        className="min-h-28 w-full rounded-group bg-muted px-4 py-3 text-[15px] leading-relaxed outline-none disabled:opacity-50"
+      />
+      <p className="mt-2 px-1 text-[13px] leading-relaxed text-fg-muted">
+        A IA usará sempre o nome, idade, gênero e biografia do personagem ativo quando falar com você.
+      </p>
+    </>
+  );
+}
+
 function DetailPage({ page }: { page: SettingsPage }) {
   const prefs = useApp((s) => s.prefs);
   const patch = useApp((s) => s.patchPrefs);
-  const setUpgrade = useApp((s) => s.setUpgrade);
-  const setPage = useApp((s) => s.setSettingsPage);
 
   if (page === "profile") {
-    const p = prefs.profile;
-    const nick = p.displayName.trim() || USER.firstName;
-    return (
-      <>
-        <div className="mb-5 flex flex-col items-center py-4">
-          <div className="mb-3 flex size-16 items-center justify-center rounded-full bg-muted text-[18px] font-medium">
-            {initialsFrom(nick, USER.initials)}
-          </div>
-          <p className="text-[17px] font-medium">{nick}</p>
-          <p className="text-[14px] text-fg-muted">{USER.email}</p>
-        </div>
-        <Group>
-          <Field
-            label="Como a IA te chama"
-            value={p.displayName}
-            placeholder="Muri"
-            onChange={(displayName) =>
-              patch((prev) => ({ ...prev, profile: { ...prev.profile, displayName } }))
-            }
-          />
-          <Field
-            label="Idade"
-            value={p.age}
-            placeholder="Opcional"
-            onChange={(age) =>
-              patch((prev) => ({ ...prev, profile: { ...prev.profile, age } }))
-            }
-          />
-          <label className="block px-4 py-3">
-            <span className="mb-1 block text-[13px] text-fg-muted">Gênero</span>
-            <select
-              value={p.gender}
-              onChange={(e) =>
-                patch((prev) => ({
-                  ...prev,
-                  profile: { ...prev.profile, gender: e.target.value },
-                }))
-              }
-              className="h-8 w-full bg-transparent text-[16px] outline-none"
-            >
-              <option value="">Não informar</option>
-              <option value="Masculino">Masculino</option>
-              <option value="Feminino">Feminino</option>
-              <option value="Não-binário">Não-binário</option>
-              <option value="Outro">Outro</option>
-            </select>
-          </label>
-        </Group>
-        <p className="mb-2 mt-5 px-1 text-[13px] font-medium text-fg-muted">
-          Descrição / força
-        </p>
-        <textarea
-          value={p.description}
-          rows={5}
-          placeholder="Ex.: sou um humano comum, fraco comparado aos heróis da história."
-          onChange={(e) =>
-            patch((prev) => ({
-              ...prev,
-              profile: { ...prev.profile, description: e.target.value },
-            }))
-          }
-          className="min-h-28 w-full rounded-group bg-muted px-4 py-3 text-[15px] leading-relaxed outline-none"
-        />
-        <p className="mt-2 px-1 text-[13px] leading-relaxed text-fg-muted">
-          A IA trata isso como verdade. Se você for fraco, não derrota o
-          personagem mais forte só porque pediu.
-        </p>
-      </>
-    );
+    return <ProfileDetailPage />;
   }
 
   if (page === "instructions") {
     return (
       <>
         <p className="mb-3 px-1 text-[14px] leading-relaxed text-fg-muted">
-          Prompt de sistema. Diga como a IA deve agir — “seja gentil”, “você é o
-          mestre de um RPG sombrio”, etc.
+          Prompt de sistema global para chats normais. Diga como a IA deve agir fora dos bots — “seja gentil”, “responda de forma concisa e direta”, etc.
         </p>
         <textarea
           value={prefs.instructions}
           rows={10}
-          placeholder="Ex.: seja gentil, direto e fale como um amigo. Ou descreva um personagem de RPG."
+          placeholder="Ex.: seja gentil, prestativo, responda em português claro e aja como um assistente amigável."
           onChange={(e) => patch({ instructions: e.target.value })}
           className="min-h-48 w-full rounded-group bg-muted px-4 py-3 text-[15px] leading-relaxed outline-none"
         />
-        <button
-          type="button"
-          onClick={() => setPage("story")}
-          className="press mt-4 flex h-12 w-full items-center justify-between rounded-group bg-ink px-4 text-[15px] font-medium text-surface"
-        >
-          <span className="flex items-center gap-2">
-            <BookOpen className="size-4" strokeWidth={1.8} />
-            História
-          </span>
-          <ChevronRight className="size-5" strokeWidth={1.6} />
-        </button>
         <p className="mt-2 px-1 text-[13px] leading-relaxed text-fg-muted">
-          Cole uma história e entre nela como um personagem. A IA só muda o que
-          suas ações realmente mudam.
-        </p>
-      </>
-    );
-  }
-
-  if (page === "story") {
-    const st = prefs.story;
-    return (
-      <>
-        <Group>
-          <ToggleRow
-            label="Modo história"
-            hint="A IA foca só nesse enredo"
-            last
-            on={st.enabled}
-            onChange={(enabled) =>
-              patch((prev) => ({ ...prev, story: { ...prev.story, enabled } }))
-            }
-          />
-        </Group>
-        <div className="mt-4 space-y-3">
-          <label className="block">
-            <span className="mb-1.5 block px-1 text-[13px] text-fg-muted">Título</span>
-            <input
-              value={st.title}
-              placeholder="Nome da história"
-              onChange={(e) =>
-                patch((prev) => ({
-                  ...prev,
-                  story: { ...prev.story, title: e.target.value },
-                }))
-              }
-              className="h-12 w-full rounded-group bg-muted px-4 text-[16px] outline-none"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block px-1 text-[13px] text-fg-muted">
-              Você entra como
-            </span>
-            <input
-              value={st.character}
-              placeholder="Personagem que você interpreta"
-              onChange={(e) =>
-                patch((prev) => ({
-                  ...prev,
-                  story: { ...prev.story, character: e.target.value },
-                }))
-              }
-              className="h-12 w-full rounded-group bg-muted px-4 text-[16px] outline-none"
-            />
-          </label>
-          <label className="block">
-            <span className="mb-1.5 block px-1 text-[13px] text-fg-muted">
-              História
-            </span>
-            <textarea
-              value={st.body}
-              rows={10}
-              placeholder="Cole o enredo completo. Finais ruins, poderes, quem é o mais forte — tudo entra aqui."
-              onChange={(e) =>
-                patch((prev) => ({
-                  ...prev,
-                  story: { ...prev.story, body: e.target.value },
-                }))
-              }
-              className="min-h-48 w-full rounded-group bg-muted px-4 py-3 text-[15px] leading-relaxed outline-none"
-            />
-          </label>
-        </div>
-        <p className="mt-3 px-1 text-[13px] leading-relaxed text-fg-muted">
-          Se o perfil diz que você é fraco e você tenta socar o mais forte, ele
-          luta de volta e ganha. A história não vira wish-fulfillment.
+          Estas instruções só afetam as conversas normais do Kairo. Os Bots de IA usam suas próprias personalidades, cenários e modo história criados na aba Bots.
         </p>
       </>
     );
@@ -415,103 +402,12 @@ function DetailPage({ page }: { page: SettingsPage }) {
     return <BackgroundPage />;
   }
 
-  if (page === "billing") {
-    return (
-      <>
-        <Group>
-          <InfoRow label="Plano" value="Gratuito" />
-          <InfoRow label="Renovação" value="—" last />
-        </Group>
-        <div className="mt-4 rounded-group bg-muted px-4 py-4">
-          <p className="mb-2 text-[14px] font-medium">Uso neste período</p>
-          <div className="h-1.5 overflow-hidden rounded-full bg-muted-2">
-            <div className="h-full w-2/5 rounded-full bg-accent" />
-          </div>
-          <p className="mt-2 text-[13px] text-fg-muted">
-            Faça upgrade para mais mensagens e modelos avançados.
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setUpgrade(true)}
-          className="press mt-4 flex h-12 w-full items-center justify-center rounded-pill bg-ink text-[15px] font-medium text-surface"
-        >
-          Fazer upgrade
-        </button>
-      </>
-    );
-  }
-
-  if (page === "notifications") {
-    return (
-      <Group>
-        <ToggleRow
-          label="Respostas prontas"
-          hint="Avisar quando o Claude terminar de responder"
-          on={prefs.notifications.replies}
-          onChange={(v) =>
-            patch((p) => ({
-              ...p,
-              notifications: { ...p.notifications, replies: v },
-            }))
-          }
-        />
-        <ToggleRow
-          label="Dicas"
-          hint="Sugestões para aproveitar melhor o app"
-          on={prefs.notifications.tips}
-          onChange={(v) =>
-            patch((p) => ({
-              ...p,
-              notifications: { ...p.notifications, tips: v },
-            }))
-          }
-        />
-        <ToggleRow
-          label="Novidades do produto"
-          last
-          on={prefs.notifications.product}
-          onChange={(v) =>
-            patch((p) => ({
-              ...p,
-              notifications: { ...p.notifications, product: v },
-            }))
-          }
-        />
-      </Group>
-    );
-  }
-
-  if (page === "focus") {
-    return (
-      <Group>
-        <ToggleRow
-          label="Não perturbe"
-          hint="Silenciar notificações"
-          on={prefs.focus.dnd}
-          onChange={(v) =>
-            patch((p) => ({ ...p, focus: { ...p.focus, dnd: v } }))
-          }
-        />
-        <ToggleRow
-          label="Limite de uso diário"
-          hint="Lembrete para pausar depois de um tempo"
-          last
-          on={prefs.focus.usageLimit}
-          onChange={(v) =>
-            patch((p) => ({ ...p, focus: { ...p.focus, usageLimit: v } }))
-          }
-        />
-      </Group>
-    );
-  }
-
   if (page === "privacy") {
     return (
       <Group>
         <ToggleRow
           label="Ajudar a treinar o modelo"
-          hint="Conversas podem ser usadas para melhorar o Claude"
+          hint="Conversas podem ser usadas para melhorar o Kairo"
           on={prefs.privacy.train}
           onChange={(v) =>
             patch((p) => ({ ...p, privacy: { ...p.privacy, train: v } }))
@@ -526,152 +422,6 @@ function DetailPage({ page }: { page: SettingsPage }) {
           }
         />
       </Group>
-    );
-  }
-
-  if (page === "shared") {
-    return (
-      <Empty
-        title="Nenhum link compartilhado"
-        body="Quando você publicar uma conversa, ela aparece aqui."
-      />
-    );
-  }
-
-  if (page === "features") {
-    return (
-      <Group>
-        <ToggleRow
-          label="Artefatos"
-          hint="Gerar documentos e código em painel separado"
-          on={prefs.features.artifacts}
-          onChange={(v) =>
-            patch((p) => ({ ...p, features: { ...p.features, artifacts: v } }))
-          }
-        />
-        <ToggleRow
-          label="Pesquisa"
-          hint="Buscar informações atualizadas quando precisar"
-          on={prefs.features.research}
-          onChange={(v) =>
-            patch((p) => ({ ...p, features: { ...p.features, research: v } }))
-          }
-        />
-        <ToggleRow
-          label="Análise estendida"
-          last
-          on={prefs.features.analysis}
-          onChange={(v) =>
-            patch((p) => ({ ...p, features: { ...p.features, analysis: v } }))
-          }
-        />
-      </Group>
-    );
-  }
-
-  if (page === "connectors") {
-    const items = [
-      { id: "gdrive", label: "Google Drive" },
-      { id: "gmail", label: "Gmail" },
-      { id: "github", label: "GitHub" },
-      { id: "notion", label: "Notion" },
-    ];
-    return (
-      <Group>
-        {items.map((it, i) => (
-          <ToggleRow
-            key={it.id}
-            label={it.label}
-            last={i === items.length - 1}
-            on={!!prefs.connectors[it.id]}
-            onChange={(v) =>
-              patch((p) => ({
-                ...p,
-                connectors: { ...p.connectors, [it.id]: v },
-              }))
-            }
-          />
-        ))}
-      </Group>
-    );
-  }
-
-  if (page === "permissions") {
-    return (
-      <Group>
-        <ToggleRow
-          label="Câmera"
-          on={prefs.permissions.camera}
-          onChange={(v) =>
-            patch((p) => ({
-              ...p,
-              permissions: { ...p.permissions, camera: v },
-            }))
-          }
-        />
-        <ToggleRow
-          label="Microfone"
-          on={prefs.permissions.mic}
-          onChange={(v) =>
-            patch((p) => ({
-              ...p,
-              permissions: { ...p.permissions, mic: v },
-            }))
-          }
-        />
-        <ToggleRow
-          label="Fotos"
-          last
-          on={prefs.permissions.photos}
-          onChange={(v) =>
-            patch((p) => ({
-              ...p,
-              permissions: { ...p.permissions, photos: v },
-            }))
-          }
-        />
-      </Group>
-    );
-  }
-
-  if (page === "appearance") {
-    const opts = ["system", "light", "dark"] as const;
-    const labels: Record<(typeof opts)[number], string> = {
-      system: "Sistema",
-      light: "Claro",
-      dark: "Escuro",
-    };
-    return (
-      <>
-        <Group>
-          {opts.map((o, i) => (
-            <button
-              key={o}
-              type="button"
-              onClick={() => patch({ appearance: o })}
-              className={cn(
-                "flex h-14 w-full items-center justify-between px-4 text-[16px]",
-                i !== opts.length - 1 && "border-b border-hairline",
-              )}
-            >
-              {labels[o]}
-              {prefs.appearance === o ? (
-                <Check className="size-4 text-accent" strokeWidth={2.4} />
-              ) : (
-                <span className="size-4" />
-              )}
-            </button>
-          ))}
-        </Group>
-        <button
-          type="button"
-          onClick={() => setPage("background")}
-          className="press mt-4 flex h-12 w-full items-center justify-between rounded-group bg-muted px-4 text-[15px]"
-        >
-          Fundo do chat
-          <ChevronRight className="size-5 text-fg-subtle" />
-        </button>
-      </>
     );
   }
 
@@ -716,7 +466,6 @@ function ApiPage() {
 
   useEffect(() => {
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [provider, prefs.api.groqFreeOnly]);
 
   function setProvider(next: AiProvider) {
@@ -736,21 +485,25 @@ function ApiPage() {
         Cole a chave da IA que você quer usar. O seletor abaixo lista os
         modelos disponíveis nessa conta.
       </p>
-      <div className="mb-4 flex flex-wrap gap-2">
-        {PROVIDERS.map((p) => (
-          <button
-            key={p.id}
-            type="button"
-            onClick={() => setProvider(p.id)}
-            className={cn(
-              "press h-9 rounded-pill px-3.5 text-[13px] font-medium",
-              provider === p.id ? "bg-ink text-surface" : "bg-muted text-fg",
-            )}
+      <label className="block mb-4">
+        <span className="mb-1.5 block px-1 text-[13px] font-medium text-fg-muted">
+          Provedor de IA
+        </span>
+        <div className="flex items-center rounded-group bg-muted px-3 py-2">
+          <select
+            value={provider}
+            onChange={(e) => setProvider(e.target.value as AiProvider)}
+            style={{ fontSize: "16px" }}
+            className="w-full bg-transparent text-fg text-[16px] outline-none cursor-pointer"
           >
-            {p.label}
-          </button>
-        ))}
-      </div>
+            {PROVIDERS.map((p) => (
+              <option key={p.id} value={p.id} className="bg-[#1c1d24] text-white">
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </div>
+      </label>
       <label className="block">
         <span className="mb-1.5 block px-1 text-[13px] text-fg-muted">
           Chave de API · {PROVIDERS.find((p) => p.id === provider)?.label}
@@ -800,39 +553,25 @@ function ApiPage() {
       {status ? (
         <p className="mt-2 px-1 text-[13px] text-fg-muted">{status}</p>
       ) : null}
-      <p className="mb-2 mt-5 px-1 text-[13px] font-medium text-fg-muted">
-        Modelo
-      </p>
-      <div className="overflow-hidden rounded-group bg-muted">
-        {(remote.length ? remote : []).map((m, i, arr) => (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => setModel(m.id)}
-            className={cn(
-              "flex min-h-12 w-full items-center justify-between gap-3 px-4 py-3 text-left",
-              i !== arr.length - 1 && "border-b border-hairline",
-            )}
+      <label className="block mb-2 mt-5">
+        <span className="mb-1.5 block px-1 text-[13px] font-medium text-fg-muted">
+          Modelo
+        </span>
+        <div className="flex items-center rounded-group bg-muted px-3 py-2">
+          <select
+            value={model}
+            onChange={(e) => setModel(e.target.value)}
+            style={{ fontSize: "16px" }}
+            className="w-full bg-transparent text-fg text-[16px] outline-none cursor-pointer"
           >
-            <span>
-              <span className="block text-[15px]">{m.name}</span>
-              {m.blurb ? (
-                <span className="block text-[12px] text-fg-muted">{m.blurb}</span>
-              ) : (
-                <span className="block text-[12px] text-fg-subtle">{m.id}</span>
-              )}
-            </span>
-            {model === m.id ? (
-              <Check className="size-4 shrink-0 text-accent" strokeWidth={2.4} />
-            ) : null}
-          </button>
-        ))}
-        {remote.length === 0 ? (
-          <p className="px-4 py-5 text-[14px] text-fg-muted">
-            Carregue os modelos depois de colar a chave.
-          </p>
-        ) : null}
-      </div>
+            {(remote.length ? remote : [{ id: model, name: model }]).map((m) => (
+              <option key={m.id} value={m.id} className="bg-[#1c1d24] text-white">
+                {m.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      </label>
     </>
   );
 }
@@ -1014,26 +753,17 @@ function ToggleRow({
         aria-checked={on}
         onClick={() => onChange(!on)}
         className={cn(
-          "relative h-[31px] w-[51px] shrink-0 rounded-full transition-colors duration-200",
-          on ? "bg-accent" : "bg-muted-2",
+          "relative inline-flex h-[31px] w-[51px] shrink-0 cursor-pointer items-center rounded-full p-[2px] transition-colors duration-200 focus:outline-none",
+          on ? "bg-blue-600" : "bg-zinc-700",
         )}
       >
         <span
           className={cn(
-            "absolute top-[2px] size-[27px] rounded-full bg-surface shadow-sm transition-transform duration-200",
-            on ? "translate-x-[22px]" : "translate-x-[2px]",
+            "pointer-events-none inline-block size-[27px] rounded-full bg-white shadow-md ring-0 transition-transform duration-200 ease-in-out",
+            on ? "translate-x-[20px]" : "translate-x-0",
           )}
         />
       </button>
-    </div>
-  );
-}
-
-function Empty({ title, body }: { title: string; body: string }) {
-  return (
-    <div className="px-4 py-16 text-center">
-      <p className="text-[17px] font-medium">{title}</p>
-      <p className="mt-1 text-[14px] text-fg-muted">{body}</p>
     </div>
   );
 }
